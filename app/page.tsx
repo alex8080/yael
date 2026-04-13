@@ -11,6 +11,7 @@ import { useEditorStore } from "@/store/editor";
 import Canvas, { CELL_SIZE } from "@/components/editor/Canvas";
 import Palette from "@/components/editor/Palette";
 import Toolbar from "@/components/editor/Toolbar";
+import PropertiesPanel from "@/components/editor/PropertiesPanel";
 import { REGISTRY_MAP } from "@/lib/components";
 
 export default function Home() {
@@ -57,6 +58,7 @@ export default function Home() {
         <div className="flex flex-1 overflow-hidden">
           <Palette />
           <Canvas />
+          <PropertiesPanel />
         </div>
       </DndContext>
     </div>

@@ -73,12 +73,22 @@ type Props = {
 
 function renderComponent(type: string, props: Record<string, unknown>) {
   switch (type) {
-    case "Button":
-      return <Button {...(props as React.ComponentProps<typeof Button>)} />;
+    case "Button": {
+      const { fontSize, ...rest } = props;
+      return (
+        <Button
+          {...(rest as React.ComponentProps<typeof Button>)}
+          style={fontSize ? { fontSize: `${fontSize}px` } : undefined}
+        />
+      );
+    }
 
     case "Text":
       return (
-        <p className="text-sm text-foreground">
+        <p
+          className="text-foreground"
+          style={{ fontSize: props.fontSize ? `${props.fontSize}px` : "0.875rem" }}
+        >
           {String(props.children ?? "")}
         </p>
       );
@@ -87,6 +97,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <Input
           placeholder={String(props.placeholder ?? "")}
+          style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}
           className="w-full"
         />
       );
@@ -95,6 +106,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <Textarea
           placeholder={String(props.placeholder ?? "")}
+          style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}
           className="w-full"
         />
       );
@@ -126,38 +138,50 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       );
 
     case "Toggle":
-      return <Toggle>{String(props.children ?? "Toggle")}</Toggle>;
-
-    case "RadioGroup":
       return (
-        <RadioGroup defaultValue="option1" className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="option1" id="r1" />
-            <Label htmlFor="r1">Option 1</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="option2" id="r2" />
-            <Label htmlFor="r2">Option 2</Label>
-          </div>
-        </RadioGroup>
+        <Toggle style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}>
+          {String(props.children ?? "Toggle")}
+        </Toggle>
       );
 
-    case "Select":
+    case "RadioGroup": {
+      const options = (props.options as string[]) ?? ["Option 1", "Option 2"];
+      return (
+        <RadioGroup defaultValue={options[0]} className="flex flex-col gap-1">
+          {options.map((opt, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <RadioGroupItem value={opt} id={`r-${i}`} />
+              <Label htmlFor={`r-${i}`}>{opt}</Label>
+            </div>
+          ))}
+        </RadioGroup>
+      );
+    }
+
+    case "Select": {
+      const options = (props.options as string[]) ?? ["Option A", "Option B", "Option C"];
       return (
         <Select>
           <SelectTrigger className="w-full">
             <SelectValue placeholder={String(props.placeholder ?? "Select...")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="a">Option A</SelectItem>
-            <SelectItem value="b">Option B</SelectItem>
-            <SelectItem value="c">Option C</SelectItem>
+            {options.map((opt, i) => (
+              <SelectItem key={i} value={opt}>
+                {opt}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       );
+    }
 
     case "Badge":
-      return <Badge>{String(props.children ?? "Badge")}</Badge>;
+      return (
+        <Badge style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}>
+          {String(props.children ?? "Badge")}
+        </Badge>
+      );
 
     case "Avatar":
       return (
