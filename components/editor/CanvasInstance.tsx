@@ -408,7 +408,7 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
         position: "relative",
       }}
       className={cn(
-        "flex items-center justify-center cursor-grab active:cursor-grabbing",
+        "flex items-start justify-start overflow-hidden cursor-grab active:cursor-grabbing p-1",
         isDragging && "opacity-50",
         isSelected && "ring-2 ring-blue-500 ring-inset rounded",
       )}

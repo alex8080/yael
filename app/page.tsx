@@ -43,7 +43,8 @@ export default function Home() {
         type: string;
         defaultProps: Record<string, unknown>;
       };
-      if (REGISTRY_MAP[type]) addInstance(type, col, row, defaultProps);
+      const meta = REGISTRY_MAP[type];
+      if (meta) addInstance(type, col, row, defaultProps, meta.defaultColSpan, meta.defaultRowSpan);
     } else if (active.data.current?.isCanvas) {
       moveInstance(active.id as string, col, row);
     }

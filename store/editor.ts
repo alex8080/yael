@@ -19,6 +19,8 @@ type EditorState = {
     col: number,
     row: number,
     defaultProps?: Record<string, unknown>,
+    colSpan?: number,
+    rowSpan?: number,
   ) => void;
   moveInstance: (id: string, col: number, row: number) => void;
   resizeInstance: (id: string, colSpan: number, rowSpan: number) => void;
@@ -31,7 +33,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   instances: [],
   selectedId: null,
 
-  addInstance: (type, col, row, defaultProps = {}) =>
+  addInstance: (type, col, row, defaultProps = {}, colSpan = 1, rowSpan = 1) =>
     set((state) => ({
       instances: [
         ...state.instances,
@@ -40,8 +42,8 @@ export const useEditorStore = create<EditorState>((set) => ({
           type,
           col,
           row,
-          colSpan: 1,
-          rowSpan: 1,
+          colSpan,
+          rowSpan,
           props: defaultProps,
         },
       ],
