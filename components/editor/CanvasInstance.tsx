@@ -2,6 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { ComponentInstance, useEditorStore } from "@/store/editor";
+import { CELL_SIZE } from "./Canvas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -322,13 +323,71 @@ function renderComponent(type: string, props: Record<string, unknown>) {
   }
 }
 
+type HandlePos = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+const HANDLE_DEFS: { pos: HandlePos; cursor: string; style: React.CSSProperties }[] = [
+  { pos: "n",  cursor: "ns-resize",   style: { top: -4,    left: "50%", transform: "translateX(-50%)", width: 16, height: 8  } },
+  { pos: "s",  cursor: "ns-resize",   style: { bottom: -4, left: "50%", transform: "translateX(-50%)", width: 16, height: 8  } },
+  { pos: "e",  cursor: "ew-resize",   style: { right: -4,  top:  "50%", transform: "translateY(-50%)", width: 8,  height: 16 } },
+  { pos: "w",  cursor: "ew-resize",   style: { left: -4,   top:  "50%", transform: "translateY(-50%)", width: 8,  height: 16 } },
+  { pos: "ne", cursor: "nesw-resize", style: { top: -4,    right:  -4,  width: 8,  height: 8 } },
+  { pos: "nw", cursor: "nwse-resize", style: { top: -4,    left:   -4,  width: 8,  height: 8 } },
+  { pos: "se", cursor: "nwse-resize", style: { bottom: -4, right:  -4,  width: 8,  height: 8 } },
+  { pos: "sw", cursor: "nesw-resize", style: { bottom: -4, left:   -4,  width: 8,  height: 8 } },
+];
+
 export default function CanvasInstance({ instance, isSelected }: Props) {
   const selectInstance = useEditorStore((s) => s.selectInstance);
+  const resizeInstance = useEditorStore((s) => s.resizeInstance);
+  const moveInstance = useEditorStore((s) => s.moveInstance);
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: instance.id,
       data: { isCanvas: true },
     });
+
+  function startResize(e: React.PointerEvent, pos: HandlePos) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const { col, row, colSpan, rowSpan, id } = instance;
+
+    function onMove(me: PointerEvent) {
+      const dx = Math.round((me.clientX - startX) / CELL_SIZE);
+      const dy = Math.round((me.clientY - startY) / CELL_SIZE);
+
+      let newColSpan = colSpan;
+      let newRowSpan = rowSpan;
+      let newCol = col;
+      let newRow = row;
+
+      if (pos.includes("e")) newColSpan = Math.max(1, colSpan + dx);
+      if (pos.includes("s")) newRowSpan = Math.max(1, rowSpan + dy);
+      if (pos.includes("w")) {
+        newColSpan = Math.max(1, colSpan - dx);
+        newCol = col + colSpan - newColSpan;
+      }
+      if (pos.includes("n")) {
+        newRowSpan = Math.max(1, rowSpan - dy);
+        newRow = row + rowSpan - newRowSpan;
+      }
+
+      resizeInstance(id, newColSpan, newRowSpan);
+      if (newCol !== col || newRow !== row) {
+        moveInstance(id, newCol, newRow);
+      }
+    }
+
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
 
   return (
     <div
@@ -346,6 +405,7 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
           ? `translate(${transform.x}px, ${transform.y}px)`
           : undefined,
         zIndex: isDragging ? 50 : isSelected ? 10 : 1,
+        position: "relative",
       }}
       className={cn(
         "flex items-center justify-center cursor-grab active:cursor-grabbing",
@@ -354,6 +414,21 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
       )}
     >
       {renderComponent(instance.type, instance.props)}
+      {isSelected &&
+        HANDLE_DEFS.map(({ pos, cursor, style }) => (
+          <div
+            key={pos}
+            onPointerDown={(e) => startResize(e, pos)}
+            style={{
+              position: "absolute",
+              cursor,
+              background: "white",
+              border: "1.5px solid #3b82f6",
+              borderRadius: 2,
+              ...style,
+            }}
+          />
+        ))}
     </div>
   );
 }
