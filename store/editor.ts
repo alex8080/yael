@@ -27,6 +27,7 @@ type EditorState = {
   selectInstance: (id: string | null) => void;
   removeInstance: (id: string) => void;
   updateProps: (id: string, props: Record<string, unknown>) => void;
+  loadInstances: (instances: ComponentInstance[]) => void;
 };
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -77,4 +78,6 @@ export const useEditorStore = create<EditorState>((set) => ({
         inst.id === id ? { ...inst, props: { ...inst.props, ...props } } : inst,
       ),
     })),
+
+  loadInstances: (instances) => set({ instances, selectedId: null }),
 }));

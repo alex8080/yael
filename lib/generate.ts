@@ -421,6 +421,40 @@ export function generateComponent(
   ].join("\n");
 }
 
+export function exportLayout(instances: ComponentInstance[], name = "layout") {
+  const json = JSON.stringify(instances, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${name}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function importLayout(
+  onLoad: (instances: ComponentInstance[]) => void,
+) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,application/json";
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (Array.isArray(data)) onLoad(data as ComponentInstance[]);
+      } catch {
+        // ignore malformed files
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
 export function downloadComponent(instances: ComponentInstance[], name = "GeneratedComponent") {
   const code = generateComponent(instances, name);
   const blob = new Blob([code], { type: "text/plain" });
