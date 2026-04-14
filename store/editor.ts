@@ -13,6 +13,7 @@ export type ComponentInstance = {
 type EditorState = {
   instances: ComponentInstance[];
   selectedId: string | null;
+  fontScale: number;
 
   addInstance: (
     type: string,
@@ -28,11 +29,13 @@ type EditorState = {
   removeInstance: (id: string) => void;
   updateProps: (id: string, props: Record<string, unknown>) => void;
   loadInstances: (instances: ComponentInstance[]) => void;
+  setFontScale: (scale: number) => void;
 };
 
 export const useEditorStore = create<EditorState>((set) => ({
   instances: [],
   selectedId: null,
+  fontScale: 1,
 
   addInstance: (type, col, row, defaultProps = {}, colSpan = 1, rowSpan = 1) =>
     set((state) => ({
@@ -80,4 +83,5 @@ export const useEditorStore = create<EditorState>((set) => ({
     })),
 
   loadInstances: (instances) => set({ instances, selectedId: null }),
+  setFontScale: (scale) => set({ fontScale: Math.max(0.5, Math.min(3, Math.round(scale * 4) / 4)) }),
 }));

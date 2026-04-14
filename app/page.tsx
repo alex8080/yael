@@ -8,7 +8,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useEditorStore } from "@/store/editor";
-import Canvas, { CELL_SIZE } from "@/components/editor/Canvas";
+import Canvas, { cellSize } from "@/components/editor/Canvas";
 import Palette from "@/components/editor/Palette";
 import Toolbar from "@/components/editor/Toolbar";
 import PropertiesPanel from "@/components/editor/PropertiesPanel";
@@ -17,6 +17,8 @@ import { REGISTRY_MAP } from "@/lib/components";
 export default function Home() {
   const addInstance = useEditorStore((s) => s.addInstance);
   const moveInstance = useEditorStore((s) => s.moveInstance);
+  const fontScale = useEditorStore((s) => s.fontScale);
+  const cs = cellSize(fontScale);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -36,8 +38,8 @@ export default function Home() {
     const finalX = initialRect.left + delta.x - canvasRect.left;
     const finalY = initialRect.top + delta.y - canvasRect.top;
 
-    const col = Math.max(1, Math.floor(finalX / CELL_SIZE) + 1);
-    const row = Math.max(1, Math.floor(finalY / CELL_SIZE) + 1);
+    const col = Math.max(1, Math.floor(finalX / cs) + 1);
+    const row = Math.max(1, Math.floor(finalY / cs) + 1);
 
     if (active.data.current?.isPalette) {
       const { type, defaultProps } = active.data.current as {

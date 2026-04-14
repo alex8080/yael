@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { ComponentInstance, useEditorStore } from "@/store/editor";
-import { CELL_SIZE } from "./Canvas";
+import { cellSize } from "./Canvas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -374,6 +374,8 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
   const selectInstance = useEditorStore((s) => s.selectInstance);
   const resizeInstance = useEditorStore((s) => s.resizeInstance);
   const moveInstance = useEditorStore((s) => s.moveInstance);
+  const fontScale = useEditorStore((s) => s.fontScale);
+  const cs = cellSize(fontScale);
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: instance.id,
@@ -389,8 +391,8 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
     const { col, row, colSpan, rowSpan, id } = instance;
 
     function onMove(me: PointerEvent) {
-      const dx = Math.round((me.clientX - startX) / CELL_SIZE);
-      const dy = Math.round((me.clientY - startY) / CELL_SIZE);
+      const dx = Math.round((me.clientX - startX) / cs);
+      const dy = Math.round((me.clientY - startY) / cs);
 
       let newColSpan = colSpan;
       let newRowSpan = rowSpan;
