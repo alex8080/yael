@@ -71,14 +71,24 @@ type Props = {
   isSelected: boolean;
 };
 
+function getTextStyle(props: Record<string, unknown>): React.CSSProperties {
+  const style: React.CSSProperties = {};
+  if (props.fontSize) style.fontSize = `${props.fontSize}px`;
+  if (props.fontWeight) style.fontWeight = props.fontWeight as string;
+  if (props.fontStyle) style.fontStyle = props.fontStyle as string;
+  if (props.fontFamily) style.fontFamily = props.fontFamily as string;
+  return style;
+}
+
 function renderComponent(type: string, props: Record<string, unknown>) {
   switch (type) {
     case "Button": {
-      const { fontSize, ...rest } = props;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { fontSize: _fs, fontWeight: _fw, fontStyle: _fst, fontFamily: _ff, ...rest } = props;
       return (
         <Button
           {...(rest as React.ComponentProps<typeof Button>)}
-          style={fontSize ? { fontSize: `${fontSize}px` } : undefined}
+          style={getTextStyle(props)}
         />
       );
     }
@@ -87,7 +97,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <p
           className="text-foreground"
-          style={{ fontSize: props.fontSize ? `${props.fontSize}px` : "0.875rem" }}
+          style={{ fontSize: "0.875rem", ...getTextStyle(props) }}
         >
           {String(props.children ?? "")}
         </p>
@@ -97,7 +107,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <Input
           placeholder={String(props.placeholder ?? "")}
-          style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}
+          style={getTextStyle(props)}
           className="w-full"
         />
       );
@@ -106,7 +116,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <Textarea
           placeholder={String(props.placeholder ?? "")}
-          style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}
+          style={getTextStyle(props)}
           className="w-full"
         />
       );
@@ -115,7 +125,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <div className="flex items-center gap-2">
           <Checkbox id="cb" />
-          <Label htmlFor="cb">{String(props.label ?? "Option")}</Label>
+          <Label htmlFor="cb" style={getTextStyle(props)}>{String(props.label ?? "Option")}</Label>
         </div>
       );
 
@@ -123,7 +133,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       return (
         <div className="flex items-center gap-2">
           <Switch id="sw" />
-          <Label htmlFor="sw">{String(props.label ?? "Toggle")}</Label>
+          <Label htmlFor="sw" style={getTextStyle(props)}>{String(props.label ?? "Toggle")}</Label>
         </div>
       );
 
@@ -139,7 +149,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
 
     case "Toggle":
       return (
-        <Toggle style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}>
+        <Toggle style={getTextStyle(props)}>
           {String(props.children ?? "Toggle")}
         </Toggle>
       );
@@ -178,7 +188,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
 
     case "Badge":
       return (
-        <Badge style={props.fontSize ? { fontSize: `${props.fontSize}px` } : undefined}>
+        <Badge style={getTextStyle(props)}>
           {String(props.children ?? "Badge")}
         </Badge>
       );
@@ -201,7 +211,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
 
     case "Alert":
       return (
-        <Alert className="w-full">
+        <Alert className="w-full" style={getTextStyle(props)}>
           <AlertTitle>{String(props.title ?? "Alert")}</AlertTitle>
           <AlertDescription>
             {String(props.description ?? "")}
@@ -211,7 +221,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
 
     case "Card":
       return (
-        <Card className="w-full">
+        <Card className="w-full" style={getTextStyle(props)}>
           <CardHeader>
             <CardTitle>{String(props.title ?? "Card Title")}</CardTitle>
             <CardDescription>
@@ -227,7 +237,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
     case "Accordion": {
       const items = (props.items as { trigger: string; content: string }[]) ?? [];
       return (
-        <Accordion className="w-full">
+        <Accordion className="w-full" style={getTextStyle(props)}>
           {items.map((item, i) => (
             <AccordionItem key={i} value={`item-${i}`}>
               <AccordionTrigger>{item.trigger}</AccordionTrigger>
@@ -242,7 +252,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       const tabs = (props.tabs as { label: string; content: string }[]) ?? [];
       const first = tabs[0]?.label ?? "tab0";
       return (
-        <Tabs defaultValue={first} className="w-full">
+        <Tabs defaultValue={first} className="w-full" style={getTextStyle(props)}>
           <TabsList>
             {tabs.map((t) => (
               <TabsTrigger key={t.label} value={t.label}>
@@ -269,7 +279,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
     case "Breadcrumb": {
       const items = (props.items as string[]) ?? ["Home", "Page"];
       return (
-        <Breadcrumb>
+        <Breadcrumb style={getTextStyle(props)}>
           <BreadcrumbList>
             {items.map((item, i) => (
               <span key={i} className="flex items-center gap-1">
@@ -319,7 +329,7 @@ function renderComponent(type: string, props: Record<string, unknown>) {
       const headers = (props.headers as string[]) ?? ["Col 1", "Col 2"];
       const rows = (props.rows as string[][]) ?? [["Cell", "Cell"]];
       return (
-        <Table>
+        <Table style={getTextStyle(props)}>
           <TableHeader>
             <TableRow>
               {headers.map((h) => (

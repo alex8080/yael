@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 function TextField({
   label,
@@ -30,24 +31,81 @@ function TextField({
   );
 }
 
-function FontSizeField({
-  value,
-  onChange,
+const FONT_FAMILIES: { label: string; value: string }[] = [
+  { label: "Default", value: "" },
+  { label: "Sans-serif", value: "ui-sans-serif, system-ui, sans-serif" },
+  { label: "Serif", value: "ui-serif, Georgia, serif" },
+  { label: "Monospace", value: "ui-monospace, monospace" },
+  { label: "Inter", value: "Inter, sans-serif" },
+  { label: "Georgia", value: "Georgia, serif" },
+  { label: "Courier New", value: "'Courier New', monospace" },
+  { label: "Times New Roman", value: "'Times New Roman', serif" },
+];
+
+function FontControls({
+  props,
+  update,
 }: {
-  value: number | undefined;
-  onChange: (v: number) => void;
+  props: Record<string, unknown>;
+  update: (p: Record<string, unknown>) => void;
 }) {
+  const isBold = props.fontWeight === "bold";
+  const isItalic = props.fontStyle === "italic";
+  const fontFamily = (props.fontFamily as string) ?? "";
+  const fontSize = props.fontSize as number | undefined;
+
   return (
-    <div className="space-y-1">
-      <Label className="text-xs font-medium">Font Size (px)</Label>
-      <Input
-        type="number"
-        value={value ?? 14}
-        min={8}
-        max={72}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="h-7 text-xs"
-      />
+    <div className="space-y-2">
+      <Label className="text-xs font-medium">Font</Label>
+      <div className="flex items-center gap-1">
+        <button
+          className={cn(
+            "h-7 w-7 text-xs border rounded font-bold flex items-center justify-center shrink-0",
+            isBold
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background hover:bg-muted",
+          )}
+          onClick={() => update({ fontWeight: isBold ? "normal" : "bold" })}
+          title="Bold"
+          type="button"
+        >
+          B
+        </button>
+        <button
+          className={cn(
+            "h-7 w-7 text-xs border rounded italic flex items-center justify-center shrink-0",
+            isItalic
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background hover:bg-muted",
+          )}
+          onClick={() => update({ fontStyle: isItalic ? "normal" : "italic" })}
+          title="Italic"
+          type="button"
+        >
+          I
+        </button>
+        <Input
+          type="number"
+          value={fontSize ?? 14}
+          min={8}
+          max={96}
+          onChange={(e) => update({ fontSize: Number(e.target.value) })}
+          className="h-7 text-xs w-16 shrink-0"
+          title="Font size (px)"
+        />
+        <span className="text-xs text-muted-foreground">px</span>
+      </div>
+      <select
+        value={fontFamily}
+        onChange={(e) => update({ fontFamily: e.target.value })}
+        className="w-full h-7 text-xs border rounded bg-background px-1"
+      >
+        {FONT_FAMILIES.map((f) => (
+          <option key={f.value} value={f.value}>
+            {f.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -195,10 +253,7 @@ export default function PropertiesPanel() {
         return (
           <>
             <TextField label="Label" propKey="children" props={props} update={update} />
-            <FontSizeField
-              value={props.fontSize as number | undefined}
-              onChange={(v) => update({ fontSize: v })}
-            />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -206,10 +261,7 @@ export default function PropertiesPanel() {
         return (
           <>
             <TextField label="Content" propKey="children" props={props} update={update} />
-            <FontSizeField
-              value={props.fontSize as number | undefined}
-              onChange={(v) => update({ fontSize: v })}
-            />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -217,10 +269,7 @@ export default function PropertiesPanel() {
         return (
           <>
             <TextField label="Label" propKey="children" props={props} update={update} />
-            <FontSizeField
-              value={props.fontSize as number | undefined}
-              onChange={(v) => update({ fontSize: v })}
-            />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -228,10 +277,7 @@ export default function PropertiesPanel() {
         return (
           <>
             <TextField label="Label" propKey="children" props={props} update={update} />
-            <FontSizeField
-              value={props.fontSize as number | undefined}
-              onChange={(v) => update({ fontSize: v })}
-            />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -239,10 +285,7 @@ export default function PropertiesPanel() {
         return (
           <>
             <TextField label="Placeholder" propKey="placeholder" props={props} update={update} />
-            <FontSizeField
-              value={props.fontSize as number | undefined}
-              onChange={(v) => update({ fontSize: v })}
-            />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -250,18 +293,25 @@ export default function PropertiesPanel() {
         return (
           <>
             <TextField label="Placeholder" propKey="placeholder" props={props} update={update} />
-            <FontSizeField
-              value={props.fontSize as number | undefined}
-              onChange={(v) => update({ fontSize: v })}
-            />
+            <FontControls props={props} update={update} />
           </>
         );
 
       case "Checkbox":
-        return <TextField label="Label" propKey="label" props={props} update={update} />;
+        return (
+          <>
+            <TextField label="Label" propKey="label" props={props} update={update} />
+            <FontControls props={props} update={update} />
+          </>
+        );
 
       case "Switch":
-        return <TextField label="Label" propKey="label" props={props} update={update} />;
+        return (
+          <>
+            <TextField label="Label" propKey="label" props={props} update={update} />
+            <FontControls props={props} update={update} />
+          </>
+        );
 
       case "Avatar":
         return <TextField label="Fallback text" propKey="fallback" props={props} update={update} />;
@@ -271,6 +321,7 @@ export default function PropertiesPanel() {
           <>
             <TextField label="Title" propKey="title" props={props} update={update} />
             <TextField label="Description" propKey="description" props={props} update={update} />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -279,6 +330,7 @@ export default function PropertiesPanel() {
           <>
             <TextField label="Title" propKey="title" props={props} update={update} />
             <TextField label="Description" propKey="description" props={props} update={update} />
+            <FontControls props={props} update={update} />
           </>
         );
 
@@ -351,56 +403,68 @@ export default function PropertiesPanel() {
       case "Accordion": {
         const items = (props.items as { trigger: string; content: string }[]) ?? [];
         return (
-          <PairListEditor
-            label="Items"
-            values={items as Record<string, string>[]}
-            keyA="trigger"
-            keyB="content"
-            placeholderA="Header"
-            placeholderB="Content"
-            newItem={{ trigger: "New Section", content: "Content here" }}
-            onChange={(v) => update({ items: v })}
-          />
+          <>
+            <PairListEditor
+              label="Items"
+              values={items as Record<string, string>[]}
+              keyA="trigger"
+              keyB="content"
+              placeholderA="Header"
+              placeholderB="Content"
+              newItem={{ trigger: "New Section", content: "Content here" }}
+              onChange={(v) => update({ items: v })}
+            />
+            <FontControls props={props} update={update} />
+          </>
         );
       }
 
       case "Tabs": {
         const tabs = (props.tabs as { label: string; content: string }[]) ?? [];
         return (
-          <PairListEditor
-            label="Tabs"
-            values={tabs as Record<string, string>[]}
-            keyA="label"
-            keyB="content"
-            placeholderA="Tab label"
-            placeholderB="Content"
-            newItem={{ label: "New Tab", content: "Content here" }}
-            onChange={(v) => update({ tabs: v })}
-          />
+          <>
+            <PairListEditor
+              label="Tabs"
+              values={tabs as Record<string, string>[]}
+              keyA="label"
+              keyB="content"
+              placeholderA="Tab label"
+              placeholderB="Content"
+              newItem={{ label: "New Tab", content: "Content here" }}
+              onChange={(v) => update({ tabs: v })}
+            />
+            <FontControls props={props} update={update} />
+          </>
         );
       }
 
       case "Breadcrumb": {
         const items = (props.items as string[]) ?? ["Home", "Page"];
         return (
-          <StringListEditor
-            label="Items"
-            values={items}
-            newItemLabel="New item"
-            onChange={(v) => update({ items: v })}
-          />
+          <>
+            <StringListEditor
+              label="Items"
+              values={items}
+              newItemLabel="New item"
+              onChange={(v) => update({ items: v })}
+            />
+            <FontControls props={props} update={update} />
+          </>
         );
       }
 
       case "Table": {
         const headers = (props.headers as string[]) ?? ["Col 1", "Col 2"];
         return (
-          <StringListEditor
-            label="Headers"
-            values={headers}
-            newItemLabel="New column"
-            onChange={(v) => update({ headers: v })}
-          />
+          <>
+            <StringListEditor
+              label="Headers"
+              values={headers}
+              newItemLabel="New column"
+              onChange={(v) => update({ headers: v })}
+            />
+            <FontControls props={props} update={update} />
+          </>
         );
       }
 
