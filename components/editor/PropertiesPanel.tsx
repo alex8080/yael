@@ -230,6 +230,7 @@ export default function PropertiesPanel() {
   const instances = useEditorStore((s) => s.instances);
   const selectedId = useEditorStore((s) => s.selectedId);
   const updateProps = useEditorStore((s) => s.updateProps);
+  const removeInstance = useEditorStore((s) => s.removeInstance);
 
   const instance = instances.find((i) => i.id === selectedId);
 
@@ -478,9 +479,20 @@ export default function PropertiesPanel() {
   return (
     <div className="w-60 shrink-0 border-l border-border bg-background overflow-y-auto">
       <div className="p-4 space-y-4">
-        <div>
-          <p className="text-xs font-semibold text-foreground">{meta?.label ?? type}</p>
-          <p className="text-xs text-muted-foreground">Properties</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-semibold text-foreground">{meta?.label ?? type}</p>
+            <p className="text-xs text-muted-foreground">Properties</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={() => removeInstance(instance.id)}
+            title="Delete component"
+          >
+            ×
+          </Button>
         </div>
         <Separator />
         {renderFields()}

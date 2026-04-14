@@ -17,13 +17,25 @@ export default function Canvas() {
   const instances = useEditorStore((s) => s.instances);
   const selectedId = useEditorStore((s) => s.selectedId);
   const selectInstance = useEditorStore((s) => s.selectInstance);
+  const removeInstance = useEditorStore((s) => s.removeInstance);
   const fontScale = useEditorStore((s) => s.fontScale);
 
   const cs = cellSize(fontScale);
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+      // Don't fire when an input/textarea inside the canvas has focus
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      removeInstance(selectedId);
+    }
+  }
+
   return (
     <div
       className="flex-1 overflow-auto bg-zinc-50"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       onClick={() => selectInstance(null)}
     >
       <div
