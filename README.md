@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Framework
+
+A locally-run web-based UI prototyping tool. Select shadcn/ui components from a palette, place them on a grid canvas, position and resize them, then download a generated Next.js page file.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to use the editor.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Palette** — drag a component from the left panel onto the canvas
+2. **Move** — drag placed components to reposition them on the grid
+3. **Resize** — select a component and drag its handles to change size
+4. **Props** — edit component properties in the right panel
+5. **Download** — click the toolbar button to export a `.tsx` page file
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js (App Router), TypeScript
+- **UI Components**: shadcn/ui (Radix UI + Tailwind CSS)
+- **State**: Zustand
+- **Drag & Drop**: @dnd-kit
+- **Package manager**: pnpm
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm dev        # Start development server
+pnpm build      # Production build
+pnpm lint       # ESLint
+pnpm typecheck  # Type check
+```
 
-## Deploy on Vercel
+Adding a shadcn component to the palette:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm dlx shadcn@latest add <component>
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Then register it in `lib/components.ts`.

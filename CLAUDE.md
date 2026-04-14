@@ -61,6 +61,8 @@ Grid uses fixed cell size (e.g. 40px). `colSpan`/`rowSpan` allow custom sizing p
 
 The canvas is a CSS grid container (`display: grid`). Each instance renders inside a grid cell range via `grid-column` / `grid-row` CSS. Snap-to-grid is natural — positions are always integer cell coordinates. Resize changes `colSpan`/`rowSpan`.
 
+`fontScale` drives both cell size (`40 * fontScale` px) and canvas `font-size` (`fontScale em`). Tailwind v4 font utilities use CSS custom properties (`--text-sm: 0.875rem` etc.), so `font-size` alone won't scale shadcn component text — `app/globals.css` overrides `--text-*` on `#editor-canvas` with `em` units so they resolve against the canvas `font-size` and scale correctly.
+
 ### Drag & Drop
 
 - **Palette → Canvas** (`@dnd-kit`): dragging a palette item creates a new `ComponentInstance` at the drop target cell.
