@@ -227,6 +227,19 @@ function renderComponent(type: string, props: Record<string, unknown>, ctx?: Ren
       );
 
     case "Card":
+      if (ctx) {
+        return (
+          <CardPreview
+            instanceId={ctx.instanceId}
+            instances={ctx.instances}
+            selectInstance={ctx.selectInstance}
+            selectedId={ctx.selectedId}
+            style={getTextStyle(props)}
+            title={String(props.title ?? "Card Title")}
+            description={String(props.description ?? "")}
+          />
+        );
+      }
       return (
         <Card className="w-full" style={getTextStyle(props)}>
           <CardHeader>
@@ -270,6 +283,18 @@ function renderComponent(type: string, props: Record<string, unknown>, ctx?: Ren
 
     case "Tabs": {
       const tabs = (props.tabs as { label: string; content: string }[]) ?? [];
+      if (ctx) {
+        return (
+          <TabsPreview
+            instanceId={ctx.instanceId}
+            tabs={tabs}
+            instances={ctx.instances}
+            selectInstance={ctx.selectInstance}
+            selectedId={ctx.selectedId}
+            style={getTextStyle(props)}
+          />
+        );
+      }
       const first = tabs[0]?.label ?? "tab0";
       return (
         <Tabs defaultValue={first} className="w-full" style={getTextStyle(props)}>
@@ -290,6 +315,17 @@ function renderComponent(type: string, props: Record<string, unknown>, ctx?: Ren
     }
 
     case "ScrollArea":
+      if (ctx) {
+        return (
+          <ScrollAreaPreview
+            instanceId={ctx.instanceId}
+            instances={ctx.instances}
+            selectInstance={ctx.selectInstance}
+            selectedId={ctx.selectedId}
+            style={getTextStyle(props)}
+          />
+        );
+      }
       return (
         <ScrollArea className="w-full h-24 rounded border p-2">
           <p className="text-sm text-muted-foreground">Scrollable content area</p>
@@ -377,7 +413,7 @@ function renderComponent(type: string, props: Record<string, unknown>, ctx?: Ren
   }
 }
 
-function AccordionSlot({
+function ContainerSlot({
   slotId,
   slotChildren,
   selectInstance,
@@ -457,7 +493,7 @@ function AccordionPreview({
           <AccordionItem key={i} value={`item-${i}`}>
             <AccordionTrigger>{item.trigger}</AccordionTrigger>
             <AccordionContent>
-              <AccordionSlot
+              <ContainerSlot
                 slotId={slotId}
                 slotChildren={slotChildren}
                 selectInstance={selectInstance}
@@ -468,6 +504,120 @@ function AccordionPreview({
         );
       })}
     </Accordion>
+  );
+}
+
+function CardPreview({
+  instanceId,
+  instances,
+  selectInstance,
+  selectedId,
+  style,
+  title,
+  description,
+}: {
+  instanceId: string;
+  instances: ComponentInstance[];
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+  style?: React.CSSProperties;
+  title: string;
+  description: string;
+}) {
+  const slotId = `slot:${instanceId}:content`;
+  const slotChildren = instances.filter(
+    (inst) => inst.parentId === instanceId && inst.slotKey === "content",
+  );
+  return (
+    <Card className="w-full" style={style}>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ContainerSlot
+          slotId={slotId}
+          slotChildren={slotChildren}
+          selectInstance={selectInstance}
+          selectedId={selectedId}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function TabsPreview({
+  instanceId,
+  tabs,
+  instances,
+  selectInstance,
+  selectedId,
+  style,
+}: {
+  instanceId: string;
+  tabs: { label: string; content: string }[];
+  instances: ComponentInstance[];
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+  style?: React.CSSProperties;
+}) {
+  const first = tabs[0]?.label ?? "tab0";
+  return (
+    <Tabs defaultValue={first} className="w-full" style={style}>
+      <TabsList>
+        {tabs.map((t) => (
+          <TabsTrigger key={t.label} value={t.label}>
+            {t.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {tabs.map((t, i) => {
+        const slotKey = `tab-${i}`;
+        const slotId = `slot:${instanceId}:${slotKey}`;
+        const slotChildren = instances.filter(
+          (inst) => inst.parentId === instanceId && inst.slotKey === slotKey,
+        );
+        return (
+          <TabsContent key={t.label} value={t.label}>
+            <ContainerSlot
+              slotId={slotId}
+              slotChildren={slotChildren}
+              selectInstance={selectInstance}
+              selectedId={selectedId}
+            />
+          </TabsContent>
+        );
+      })}
+    </Tabs>
+  );
+}
+
+function ScrollAreaPreview({
+  instanceId,
+  instances,
+  selectInstance,
+  selectedId,
+  style,
+}: {
+  instanceId: string;
+  instances: ComponentInstance[];
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+  style?: React.CSSProperties;
+}) {
+  const slotId = `slot:${instanceId}:content`;
+  const slotChildren = instances.filter(
+    (inst) => inst.parentId === instanceId && inst.slotKey === "content",
+  );
+  return (
+    <ScrollArea className="w-full h-full rounded border p-2" style={style}>
+      <ContainerSlot
+        slotId={slotId}
+        slotChildren={slotChildren}
+        selectInstance={selectInstance}
+        selectedId={selectedId}
+      />
+    </ScrollArea>
   );
 }
 

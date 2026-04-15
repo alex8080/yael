@@ -23,7 +23,7 @@ A locally-run web-based UI prototyping tool built with Next.js and TypeScript. U
 pnpm dev          # Start development server
 pnpm build        # Production build
 pnpm lint         # ESLint
-pnpm typecheck    # tsc --noEmit
+pnpm tsc --noEmit  # type check (no typecheck script)
 ```
 
 Adding a new shadcn component:
@@ -46,6 +46,8 @@ type ComponentInstance = {
   colSpan: number;       // grid columns occupied (default 1, user-overridable)
   rowSpan: number;       // grid rows occupied (default 1, user-overridable)
   props: Record<string, unknown>;
+  parentId?: string;   // set when instance lives in a container slot
+  slotKey?: string;    // identifies which slot, e.g. "content", "tab-0", "item-1"
 };
 
 type EditorState = {
@@ -90,6 +92,15 @@ lib/
   generate.ts     # Code generation logic
   components.ts   # Registry: maps component type name → metadata + default props
 ```
+
+### Container / Slot Pattern
+
+Components that accept dropped children (Accordion, Card, Tabs, ScrollArea) use:
+- A `*Preview` component that renders `ContainerSlot` children instead of static text
+- `ContainerSlot` is a `useDroppable` div with id `slot:{parentId}:{slotKey}`
+- `renderComponent` delegates to the preview when `ctx: RenderCtx` is passed
+- Drop handling in `app/page.tsx` recognises `overId.startsWith("slot:")` and calls `addInstance(..., parentId, slotKey)`
+- Slot keys: Card/ScrollArea use `"content"`; Tabs use `"tab-{i}"`; Accordion uses `"item-{i}"`
 
 ### Component Registry
 
