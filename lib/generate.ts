@@ -100,7 +100,7 @@ function ind(code: string, spaces: number): string {
     .join("\n");
 }
 
-function renderJsx(type: string, props: Record<string, unknown>, idx: number): string {
+function renderJsx(type: string, props: Record<string, unknown>, idx: number, allInstances?: ComponentInstance[], instanceId?: string): string {
   switch (type) {
     case "Button": {
       const fs = props.fontSize ? ` style={{ fontSize: "${props.fontSize}px" }}` : "";
@@ -229,10 +229,25 @@ function renderJsx(type: string, props: Record<string, unknown>, idx: number): s
     case "Accordion": {
       const items = (props.items as { trigger: string; content: string }[]) ?? [];
       const children = items
-        .map(
-          (item, i) =>
-            `  <AccordionItem value="item-${i}">\n    <AccordionTrigger>${item.trigger}</AccordionTrigger>\n    <AccordionContent>${item.content}</AccordionContent>\n  </AccordionItem>`,
-        )
+        .map((item, i) => {
+          const slotKey = `item-${i}`;
+          const slotChildren = allInstances?.filter(
+            (inst) => inst.parentId === instanceId && inst.slotKey === slotKey,
+          ) ?? [];
+          const contentJsx = slotChildren.length > 0
+            ? slotChildren
+                .map((child, ci) => `      ${renderJsx(child.type, child.props, ci)}`)
+                .join("\n")
+            : `      ${item.content}`;
+          return [
+            `  <AccordionItem value="item-${i}">`,
+            `    <AccordionTrigger>${item.trigger}</AccordionTrigger>`,
+            `    <AccordionContent>`,
+            contentJsx,
+            `    </AccordionContent>`,
+            `  </AccordionItem>`,
+          ].join("\n");
+        })
         .join("\n");
       return `<Accordion type="single" collapsible className="w-full">\n${children}\n</Accordion>`;
     }
@@ -364,7 +379,7 @@ export function generateComponent(
   instances: ComponentInstance[],
   name = "GeneratedComponent",
 ): string {
-  if (instances.length === 0) {
+  if (instances.filter((i) => !i.parentId).length === 0) {
     return [
       `"use client";`,
       ``,
@@ -374,22 +389,26 @@ export function generateComponent(
     ].join("\n");
   }
 
+  // Only root instances (no parentId) form the absolute-positioned layout
+  const rootInstances = instances.filter((i) => !i.parentId);
+
   // Bounding box — only render the used region
-  const maxCol = Math.max(...instances.map((i) => i.col + i.colSpan - 1));
-  const maxRow = Math.max(...instances.map((i) => i.row + i.rowSpan - 1));
+  const maxCol = Math.max(...rootInstances.map((i) => i.col + i.colSpan - 1));
+  const maxRow = Math.max(...rootInstances.map((i) => i.row + i.rowSpan - 1));
   const width = maxCol * CELL_SIZE;
   const height = maxRow * CELL_SIZE;
 
+  // Include all instance types (children too) for import collection
   const usedTypes = Array.from(new Set(instances.map((i) => i.type)));
   const imports = buildImports(usedTypes);
 
-  const children = instances
+  const children = rootInstances
     .map((inst, idx) => {
       const top = (inst.row - 1) * CELL_SIZE;
       const left = (inst.col - 1) * CELL_SIZE;
       const w = inst.colSpan * CELL_SIZE;
       const h = inst.rowSpan * CELL_SIZE;
-      const jsx = ind(renderJsx(inst.type, inst.props, idx), 8);
+      const jsx = ind(renderJsx(inst.type, inst.props, idx, instances, inst.id), 8);
       return [
         `      <div`,
         `        style={{`,

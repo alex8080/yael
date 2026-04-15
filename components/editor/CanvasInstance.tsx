@@ -1,6 +1,6 @@
 "use client";
 
-import { useDraggable } from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ComponentInstance, useEditorStore } from "@/store/editor";
 import { cellSize } from "./Canvas";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,13 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+type RenderCtx = {
+  instanceId: string;
+  instances: ComponentInstance[];
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+};
+
 type Props = {
   instance: ComponentInstance;
   isSelected: boolean;
@@ -80,7 +87,7 @@ function getTextStyle(props: Record<string, unknown>): React.CSSProperties {
   return style;
 }
 
-function renderComponent(type: string, props: Record<string, unknown>) {
+function renderComponent(type: string, props: Record<string, unknown>, ctx?: RenderCtx) {
   switch (type) {
     case "Button": {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -236,8 +243,21 @@ function renderComponent(type: string, props: Record<string, unknown>) {
 
     case "Accordion": {
       const items = (props.items as { trigger: string; content: string }[]) ?? [];
+      if (ctx) {
+        return (
+          <AccordionPreview
+            instanceId={ctx.instanceId}
+            items={items}
+            instances={ctx.instances}
+            selectInstance={ctx.selectInstance}
+            selectedId={ctx.selectedId}
+            style={getTextStyle(props)}
+          />
+        );
+      }
+      // Fallback when ctx is unavailable
       return (
-        <Accordion className="w-full" style={getTextStyle(props)}>
+        <Accordion multiple defaultValue={items.map((_, i) => `item-${i}`)} className="w-full" style={getTextStyle(props)}>
           {items.map((item, i) => (
             <AccordionItem key={i} value={`item-${i}`}>
               <AccordionTrigger>{item.trigger}</AccordionTrigger>
@@ -357,6 +377,100 @@ function renderComponent(type: string, props: Record<string, unknown>) {
   }
 }
 
+function AccordionSlot({
+  slotId,
+  slotChildren,
+  selectInstance,
+  selectedId,
+}: {
+  slotId: string;
+  slotChildren: ComponentInstance[];
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: slotId });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "min-h-8 w-full rounded p-1 transition-colors",
+        isOver
+          ? "bg-blue-50 ring-1 ring-blue-300 ring-inset"
+          : "border border-dashed border-muted-foreground/25",
+      )}
+    >
+      {slotChildren.length === 0 ? (
+        <p className="text-xs text-muted-foreground/50 text-center py-0.5">
+          Drop here
+        </p>
+      ) : (
+        slotChildren.map((child) => (
+          <div
+            key={child.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              selectInstance(child.id);
+            }}
+            className={cn(
+              "rounded p-1 cursor-pointer",
+              selectedId === child.id && "ring-2 ring-blue-500 ring-inset",
+            )}
+          >
+            {renderComponent(child.type, child.props)}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function AccordionPreview({
+  instanceId,
+  items,
+  instances,
+  selectInstance,
+  selectedId,
+  style,
+}: {
+  instanceId: string;
+  items: { trigger: string; content: string }[];
+  instances: ComponentInstance[];
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+  style?: React.CSSProperties;
+}) {
+  const allValues = items.map((_, i) => `item-${i}`);
+  return (
+    <Accordion
+      multiple
+      defaultValue={allValues}
+      className="w-full"
+      style={style}
+    >
+      {items.map((item, i) => {
+        const slotKey = `item-${i}`;
+        const slotId = `slot:${instanceId}:${slotKey}`;
+        const slotChildren = instances.filter(
+          (inst) => inst.parentId === instanceId && inst.slotKey === slotKey,
+        );
+        return (
+          <AccordionItem key={i} value={`item-${i}`}>
+            <AccordionTrigger>{item.trigger}</AccordionTrigger>
+            <AccordionContent>
+              <AccordionSlot
+                slotId={slotId}
+                slotChildren={slotChildren}
+                selectInstance={selectInstance}
+                selectedId={selectedId}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
+    </Accordion>
+  );
+}
+
 type HandlePos = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 const HANDLE_DEFS: { pos: HandlePos; cursor: string; style: React.CSSProperties }[] = [
@@ -375,6 +489,8 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
   const resizeInstance = useEditorStore((s) => s.resizeInstance);
   const moveInstance = useEditorStore((s) => s.moveInstance);
   const fontScale = useEditorStore((s) => s.fontScale);
+  const instances = useEditorStore((s) => s.instances);
+  const selectedId = useEditorStore((s) => s.selectedId);
   const cs = cellSize(fontScale);
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -449,7 +565,7 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
         isSelected && "ring-2 ring-blue-500 ring-inset rounded",
       )}
     >
-      {renderComponent(instance.type, instance.props)}
+      {renderComponent(instance.type, instance.props, { instanceId: instance.id, instances, selectInstance, selectedId })}
       {isSelected &&
         HANDLE_DEFS.map(({ pos, cursor, style }) => (
           <div

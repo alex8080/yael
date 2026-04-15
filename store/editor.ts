@@ -8,6 +8,10 @@ export type ComponentInstance = {
   colSpan: number;
   rowSpan: number;
   props: Record<string, unknown>;
+  /** Set when this instance lives inside a container slot rather than the root canvas grid. */
+  parentId?: string;
+  /** Identifies which slot within the parent, e.g. "item-0" for the first accordion section. */
+  slotKey?: string;
 };
 
 type EditorState = {
@@ -22,6 +26,8 @@ type EditorState = {
     defaultProps?: Record<string, unknown>,
     colSpan?: number,
     rowSpan?: number,
+    parentId?: string,
+    slotKey?: string,
   ) => void;
   moveInstance: (id: string, col: number, row: number) => void;
   resizeInstance: (id: string, colSpan: number, rowSpan: number) => void;
@@ -37,7 +43,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   selectedId: null,
   fontScale: 1,
 
-  addInstance: (type, col, row, defaultProps = {}, colSpan = 1, rowSpan = 1) =>
+  addInstance: (type, col, row, defaultProps = {}, colSpan = 1, rowSpan = 1, parentId?, slotKey?) =>
     set((state) => ({
       instances: [
         ...state.instances,
@@ -49,6 +55,7 @@ export const useEditorStore = create<EditorState>((set) => ({
           colSpan,
           rowSpan,
           props: defaultProps,
+          ...(parentId !== undefined ? { parentId, slotKey } : {}),
         },
       ],
     })),
@@ -71,7 +78,8 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   removeInstance: (id) =>
     set((state) => ({
-      instances: state.instances.filter((inst) => inst.id !== id),
+      // Also remove any instances that are children of the removed instance
+      instances: state.instances.filter((inst) => inst.id !== id && inst.parentId !== id),
       selectedId: state.selectedId === id ? null : state.selectedId,
     })),
 

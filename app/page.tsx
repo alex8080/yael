@@ -26,7 +26,27 @@ export default function Home() {
 
   function onDragEnd(event: DragEndEvent) {
     const { active, over, delta } = event;
-    if (!over || over.id !== "canvas") return;
+    if (!over) return;
+
+    const overId = String(over.id);
+
+    // Drop onto an accordion (or other container) content slot
+    if (overId.startsWith("slot:")) {
+      if (!active.data.current?.isPalette) return;
+      // Format: slot:{parentId}:{slotKey}  — UUIDs contain no ":" so split is safe
+      const colonIdx = overId.indexOf(":", "slot:".length);
+      const parentId = overId.slice("slot:".length, colonIdx);
+      const slotKey = overId.slice(colonIdx + 1);
+      const { type, defaultProps } = active.data.current as {
+        type: string;
+        defaultProps: Record<string, unknown>;
+      };
+      const meta = REGISTRY_MAP[type];
+      if (meta) addInstance(type, 0, 0, defaultProps, meta.defaultColSpan, meta.defaultRowSpan, parentId, slotKey);
+      return;
+    }
+
+    if (overId !== "canvas") return;
 
     const canvasEl = document.getElementById("editor-canvas");
     if (!canvasEl) return;

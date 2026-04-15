@@ -55,7 +55,7 @@ export default function Canvas() {
           backgroundSize: `${cs}px ${cs}px`,
         }}
       >
-        {instances.map((inst) => (
+        {instances.filter((inst) => !inst.parentId).map((inst) => (
           <CanvasInstance
             key={inst.id}
             instance={inst}
