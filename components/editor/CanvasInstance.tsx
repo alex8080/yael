@@ -413,49 +413,173 @@ function renderComponent(type: string, props: Record<string, unknown>, ctx?: Ren
   }
 }
 
+type HandlePos = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+const HANDLE_DEFS: { pos: HandlePos; cursor: string; style: React.CSSProperties }[] = [
+  { pos: "n",  cursor: "ns-resize",   style: { top: -4,    left: "50%", transform: "translateX(-50%)", width: 16, height: 8  } },
+  { pos: "s",  cursor: "ns-resize",   style: { bottom: -4, left: "50%", transform: "translateX(-50%)", width: 16, height: 8  } },
+  { pos: "e",  cursor: "ew-resize",   style: { right: -4,  top:  "50%", transform: "translateY(-50%)", width: 8,  height: 16 } },
+  { pos: "w",  cursor: "ew-resize",   style: { left: -4,   top:  "50%", transform: "translateY(-50%)", width: 8,  height: 16 } },
+  { pos: "ne", cursor: "nesw-resize", style: { top: -4,    right:  -4,  width: 8,  height: 8 } },
+  { pos: "nw", cursor: "nwse-resize", style: { top: -4,    left:   -4,  width: 8,  height: 8 } },
+  { pos: "se", cursor: "nwse-resize", style: { bottom: -4, right:  -4,  width: 8,  height: 8 } },
+  { pos: "sw", cursor: "nesw-resize", style: { bottom: -4, left:   -4,  width: 8,  height: 8 } },
+];
+
+function SlotChild({
+  child,
+  selectInstance,
+  selectedId,
+}: {
+  child: ComponentInstance;
+  selectInstance: (id: string | null) => void;
+  selectedId: string | null;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: child.id,
+    data: { isSlotChild: true },
+  });
+  const resizeInstance = useEditorStore((s) => s.resizeInstance);
+  const moveInstance = useEditorStore((s) => s.moveInstance);
+  const fontScale = useEditorStore((s) => s.fontScale);
+  const cs = cellSize(fontScale);
+  const isSelected = selectedId === child.id;
+
+  function startResize(e: React.PointerEvent, pos: HandlePos) {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const { col, row, colSpan, rowSpan, id } = child;
+
+    function onMove(me: PointerEvent) {
+      const dx = Math.round((me.clientX - startX) / cs);
+      const dy = Math.round((me.clientY - startY) / cs);
+      let newColSpan = colSpan;
+      let newRowSpan = rowSpan;
+      let newCol = col;
+      let newRow = row;
+      if (pos.includes("e")) newColSpan = Math.max(1, colSpan + dx);
+      if (pos.includes("s")) newRowSpan = Math.max(1, rowSpan + dy);
+      if (pos.includes("w")) {
+        newColSpan = Math.max(1, colSpan - dx);
+        newCol = col + colSpan - newColSpan;
+      }
+      if (pos.includes("n")) {
+        newRowSpan = Math.max(1, rowSpan - dy);
+        newRow = row + rowSpan - newRowSpan;
+      }
+      resizeInstance(id, newColSpan, newRowSpan);
+      if (newCol !== col || newRow !== row) moveInstance(id, newCol, newRow);
+    }
+
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  const col = Math.max(1, child.col);
+  const row = Math.max(1, child.row);
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={(e) => {
+        e.stopPropagation();
+        selectInstance(child.id);
+      }}
+      style={{
+        gridColumn: `${col} / span ${child.colSpan}`,
+        gridRow: `${row} / span ${child.rowSpan}`,
+        transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
+        zIndex: isDragging ? 50 : isSelected ? 10 : 1,
+        position: "relative",
+      }}
+      className={cn(
+        "flex items-stretch overflow-hidden cursor-grab active:cursor-grabbing p-1",
+        isDragging && "opacity-50",
+        isSelected && "ring-2 ring-blue-500 ring-inset rounded",
+      )}
+    >
+      {renderComponent(child.type, child.props)}
+      {isSelected && HANDLE_DEFS.map(({ pos, cursor, style }) => (
+        <div
+          key={pos}
+          onPointerDown={(e) => startResize(e, pos)}
+          style={{
+            position: "absolute",
+            cursor,
+            background: "white",
+            border: "1.5px solid #3b82f6",
+            borderRadius: 2,
+            ...style,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function ContainerSlot({
   slotId,
   slotChildren,
   selectInstance,
   selectedId,
+  internalCols,
+  internalRows,
 }: {
   slotId: string;
   slotChildren: ComponentInstance[];
   selectInstance: (id: string | null) => void;
   selectedId: string | null;
+  internalCols: number;
+  internalRows: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: slotId });
+  const fontScale = useEditorStore((s) => s.fontScale);
+  const cs = cellSize(fontScale);
+  const w = internalCols * cs;
+  const h = internalRows * cs;
+
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-8 w-full rounded p-1 transition-colors",
-        isOver
-          ? "bg-blue-50 ring-1 ring-blue-300 ring-inset"
-          : "border border-dashed border-muted-foreground/25",
+        "relative rounded transition-colors",
+        isOver && "ring-2 ring-blue-400 ring-inset",
       )}
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${internalCols}, ${cs}px)`,
+        gridTemplateRows: `repeat(${internalRows}, ${cs}px)`,
+        width: w,
+        height: h,
+        backgroundImage: [
+          "linear-gradient(to right, #e5e7eb 1px, transparent 1px)",
+          "linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)",
+        ].join(", "),
+        backgroundSize: `${cs}px ${cs}px`,
+        backgroundColor: isOver ? "rgb(239 246 255)" : "transparent",
+      }}
     >
-      {slotChildren.length === 0 ? (
-        <p className="text-xs text-muted-foreground/50 text-center py-0.5">
-          Drop here
-        </p>
-      ) : (
-        slotChildren.map((child) => (
-          <div
-            key={child.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              selectInstance(child.id);
-            }}
-            className={cn(
-              "rounded p-1 cursor-pointer",
-              selectedId === child.id && "ring-2 ring-blue-500 ring-inset",
-            )}
-          >
-            {renderComponent(child.type, child.props)}
-          </div>
-        ))
+      {slotChildren.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <p className="text-xs text-muted-foreground/40">drop here</p>
+        </div>
       )}
+      {slotChildren.map((child) => (
+        <SlotChild
+          key={child.id}
+          child={child}
+          selectInstance={selectInstance}
+          selectedId={selectedId}
+        />
+      ))}
     </div>
   );
 }
@@ -475,14 +599,16 @@ function AccordionPreview({
   selectedId: string | null;
   style?: React.CSSProperties;
 }) {
+  const parent = instances.find((i) => i.id === instanceId);
+  const parentCols = parent?.colSpan ?? 4;
+  const parentRows = parent?.rowSpan ?? 4;
+  const n = Math.max(1, items.length);
+  // Each accordion item has a trigger row; remaining rows split across content slots
+  const contentRowsPerSlot = Math.max(2, Math.floor((parentRows - n) / n));
+
   const allValues = items.map((_, i) => `item-${i}`);
   return (
-    <Accordion
-      multiple
-      defaultValue={allValues}
-      className="w-full"
-      style={style}
-    >
+    <Accordion multiple defaultValue={allValues} className="w-full" style={style}>
       {items.map((item, i) => {
         const slotKey = `item-${i}`;
         const slotId = `slot:${instanceId}:${slotKey}`;
@@ -498,6 +624,8 @@ function AccordionPreview({
                 slotChildren={slotChildren}
                 selectInstance={selectInstance}
                 selectedId={selectedId}
+                internalCols={parentCols}
+                internalRows={contentRowsPerSlot}
               />
             </AccordionContent>
           </AccordionItem>
@@ -524,6 +652,12 @@ function CardPreview({
   title: string;
   description: string;
 }) {
+  const parent = instances.find((i) => i.id === instanceId);
+  const parentCols = parent?.colSpan ?? 4;
+  const parentRows = parent?.rowSpan ?? 4;
+  // ~2 rows consumed by CardHeader (title + description + padding)
+  const contentRows = Math.max(2, parentRows - 2);
+
   const slotId = `slot:${instanceId}:content`;
   const slotChildren = instances.filter(
     (inst) => inst.parentId === instanceId && inst.slotKey === "content",
@@ -534,12 +668,14 @@ function CardPreview({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 pt-0">
         <ContainerSlot
           slotId={slotId}
           slotChildren={slotChildren}
           selectInstance={selectInstance}
           selectedId={selectedId}
+          internalCols={parentCols}
+          internalRows={contentRows}
         />
       </CardContent>
     </Card>
@@ -561,6 +697,12 @@ function TabsPreview({
   selectedId: string | null;
   style?: React.CSSProperties;
 }) {
+  const parent = instances.find((i) => i.id === instanceId);
+  const parentCols = parent?.colSpan ?? 4;
+  const parentRows = parent?.rowSpan ?? 4;
+  // ~1 row consumed by TabsList
+  const contentRows = Math.max(2, parentRows - 1);
+
   const first = tabs[0]?.label ?? "tab0";
   return (
     <Tabs defaultValue={first} className="w-full" style={style}>
@@ -578,12 +720,14 @@ function TabsPreview({
           (inst) => inst.parentId === instanceId && inst.slotKey === slotKey,
         );
         return (
-          <TabsContent key={t.label} value={t.label}>
+          <TabsContent key={t.label} value={t.label} className="mt-1">
             <ContainerSlot
               slotId={slotId}
               slotChildren={slotChildren}
               selectInstance={selectInstance}
               selectedId={selectedId}
+              internalCols={parentCols}
+              internalRows={contentRows}
             />
           </TabsContent>
         );
@@ -605,34 +749,32 @@ function ScrollAreaPreview({
   selectedId: string | null;
   style?: React.CSSProperties;
 }) {
+  const parent = instances.find((i) => i.id === instanceId);
+  const parentCols = parent?.colSpan ?? 4;
+  const parentRows = parent?.rowSpan ?? 4;
+  const fontScale = useEditorStore((s) => s.fontScale);
+  const cs = cellSize(fontScale);
+
   const slotId = `slot:${instanceId}:content`;
   const slotChildren = instances.filter(
     (inst) => inst.parentId === instanceId && inst.slotKey === "content",
   );
   return (
-    <ScrollArea className="w-full h-full rounded border p-2" style={style}>
+    <ScrollArea
+      className="rounded border"
+      style={{ ...style, width: parentCols * cs, height: parentRows * cs }}
+    >
       <ContainerSlot
         slotId={slotId}
         slotChildren={slotChildren}
         selectInstance={selectInstance}
         selectedId={selectedId}
+        internalCols={parentCols}
+        internalRows={parentRows}
       />
     </ScrollArea>
   );
 }
-
-type HandlePos = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
-
-const HANDLE_DEFS: { pos: HandlePos; cursor: string; style: React.CSSProperties }[] = [
-  { pos: "n",  cursor: "ns-resize",   style: { top: -4,    left: "50%", transform: "translateX(-50%)", width: 16, height: 8  } },
-  { pos: "s",  cursor: "ns-resize",   style: { bottom: -4, left: "50%", transform: "translateX(-50%)", width: 16, height: 8  } },
-  { pos: "e",  cursor: "ew-resize",   style: { right: -4,  top:  "50%", transform: "translateY(-50%)", width: 8,  height: 16 } },
-  { pos: "w",  cursor: "ew-resize",   style: { left: -4,   top:  "50%", transform: "translateY(-50%)", width: 8,  height: 16 } },
-  { pos: "ne", cursor: "nesw-resize", style: { top: -4,    right:  -4,  width: 8,  height: 8 } },
-  { pos: "nw", cursor: "nwse-resize", style: { top: -4,    left:   -4,  width: 8,  height: 8 } },
-  { pos: "se", cursor: "nwse-resize", style: { bottom: -4, right:  -4,  width: 8,  height: 8 } },
-  { pos: "sw", cursor: "nesw-resize", style: { bottom: -4, left:   -4,  width: 8,  height: 8 } },
-];
 
 export default function CanvasInstance({ instance, isSelected }: Props) {
   const selectInstance = useEditorStore((s) => s.selectInstance);
@@ -710,7 +852,7 @@ export default function CanvasInstance({ instance, isSelected }: Props) {
         position: "relative",
       }}
       className={cn(
-        "flex items-start justify-start overflow-hidden cursor-grab active:cursor-grabbing p-1",
+        "flex items-stretch justify-start overflow-hidden cursor-grab active:cursor-grabbing p-1",
         isDragging && "opacity-50",
         isSelected && "ring-2 ring-blue-500 ring-inset rounded",
       )}

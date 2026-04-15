@@ -31,6 +31,7 @@ type EditorState = {
   ) => void;
   moveInstance: (id: string, col: number, row: number) => void;
   resizeInstance: (id: string, colSpan: number, rowSpan: number) => void;
+  reparentInstance: (id: string, parentId?: string, slotKey?: string) => void;
   selectInstance: (id: string | null) => void;
   removeInstance: (id: string) => void;
   updateProps: (id: string, props: Record<string, unknown>) => void;
@@ -64,6 +65,15 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((state) => ({
       instances: state.instances.map((inst) =>
         inst.id === id ? { ...inst, col, row } : inst,
+      ),
+    })),
+
+  reparentInstance: (id, parentId, slotKey) =>
+    set((state) => ({
+      instances: state.instances.map((inst) =>
+        inst.id === id
+          ? { ...inst, parentId, slotKey }
+          : inst,
       ),
     })),
 

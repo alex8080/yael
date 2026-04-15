@@ -100,6 +100,33 @@ function ind(code: string, spaces: number): string {
     .join("\n");
 }
 
+/**
+ * Renders slot children as absolutely-positioned elements inside a relative container,
+ * mirroring the internal grid layout. Falls back to `fallback` if no children.
+ */
+function slotContentJsx(
+  slotChildren: ComponentInstance[],
+  width: number,
+  height: number,
+  allInstances: ComponentInstance[],
+  fallback: string,
+): string {
+  if (slotChildren.length === 0) return fallback;
+  const items = slotChildren.map((child, ci) => {
+    const top = (Math.max(1, child.row) - 1) * CELL_SIZE;
+    const left = (Math.max(1, child.col) - 1) * CELL_SIZE;
+    const w = child.colSpan * CELL_SIZE;
+    const h = child.rowSpan * CELL_SIZE;
+    const jsx = ind(renderJsx(child.type, child.props, ci, allInstances, child.id), 2);
+    return `<div style={{ position: "absolute", top: ${top}, left: ${left}, width: ${w}, height: ${h} }}>\n${jsx}\n</div>`;
+  });
+  return (
+    `<div style={{ position: "relative", width: ${width}, height: ${height} }}>\n` +
+    items.map((i) => ind(i, 2)).join("\n") +
+    `\n</div>`
+  );
+}
+
 function renderJsx(type: string, props: Record<string, unknown>, idx: number, allInstances?: ComponentInstance[], instanceId?: string): string {
   switch (type) {
     case "Button": {
@@ -213,7 +240,21 @@ function renderJsx(type: string, props: Record<string, unknown>, idx: number, al
         `</Alert>`,
       ].join("\n");
 
-    case "Card":
+    case "Card": {
+      const parent = allInstances?.find((i) => i.id === instanceId);
+      const parentCols = parent?.colSpan ?? 4;
+      const parentRows = parent?.rowSpan ?? 4;
+      const contentRows = Math.max(2, parentRows - 2);
+      const slotChildren = allInstances?.filter(
+        (i) => i.parentId === instanceId && i.slotKey === "content",
+      ) ?? [];
+      const content = slotContentJsx(
+        slotChildren,
+        parentCols * CELL_SIZE,
+        contentRows * CELL_SIZE,
+        allInstances ?? [],
+        `<p className="text-sm text-muted-foreground">Card content</p>`,
+      );
       return [
         `<Card className="w-full">`,
         `  <CardHeader>`,
@@ -221,29 +262,37 @@ function renderJsx(type: string, props: Record<string, unknown>, idx: number, al
         `    <CardDescription>${props.description ?? ""}</CardDescription>`,
         `  </CardHeader>`,
         `  <CardContent>`,
-        `    <p className="text-sm text-muted-foreground">Card content</p>`,
+        ind(content, 4),
         `  </CardContent>`,
         `</Card>`,
       ].join("\n");
+    }
 
     case "Accordion": {
       const items = (props.items as { trigger: string; content: string }[]) ?? [];
+      const parent = allInstances?.find((i) => i.id === instanceId);
+      const parentCols = parent?.colSpan ?? 4;
+      const parentRows = parent?.rowSpan ?? 4;
+      const n = Math.max(1, items.length);
+      const contentRowsPerSlot = Math.max(2, Math.floor((parentRows - n) / n));
       const children = items
         .map((item, i) => {
           const slotKey = `item-${i}`;
           const slotChildren = allInstances?.filter(
             (inst) => inst.parentId === instanceId && inst.slotKey === slotKey,
           ) ?? [];
-          const contentJsx = slotChildren.length > 0
-            ? slotChildren
-                .map((child, ci) => `      ${renderJsx(child.type, child.props, ci)}`)
-                .join("\n")
-            : `      ${item.content}`;
+          const content = slotContentJsx(
+            slotChildren,
+            parentCols * CELL_SIZE,
+            contentRowsPerSlot * CELL_SIZE,
+            allInstances ?? [],
+            item.content,
+          );
           return [
             `  <AccordionItem value="item-${i}">`,
             `    <AccordionTrigger>${item.trigger}</AccordionTrigger>`,
             `    <AccordionContent>`,
-            contentJsx,
+            ind(content, 6),
             `    </AccordionContent>`,
             `  </AccordionItem>`,
           ].join("\n");
@@ -255,14 +304,28 @@ function renderJsx(type: string, props: Record<string, unknown>, idx: number, al
     case "Tabs": {
       const tabs = (props.tabs as { label: string; content: string }[]) ?? [];
       const first = tabs[0]?.label ?? "tab0";
+      const parent = allInstances?.find((i) => i.id === instanceId);
+      const parentCols = parent?.colSpan ?? 4;
+      const parentRows = parent?.rowSpan ?? 4;
+      const contentRows = Math.max(2, parentRows - 1);
       const triggers = tabs
         .map((t) => `    <TabsTrigger value="${t.label}">${t.label}</TabsTrigger>`)
         .join("\n");
       const contents = tabs
-        .map(
-          (t) =>
-            `  <TabsContent value="${t.label}">\n    <p className="text-sm">${t.content}</p>\n  </TabsContent>`,
-        )
+        .map((t, i) => {
+          const slotKey = `tab-${i}`;
+          const slotChildren = allInstances?.filter(
+            (inst) => inst.parentId === instanceId && inst.slotKey === slotKey,
+          ) ?? [];
+          const content = slotContentJsx(
+            slotChildren,
+            parentCols * CELL_SIZE,
+            contentRows * CELL_SIZE,
+            allInstances ?? [],
+            `<p className="text-sm">${t.content}</p>`,
+          );
+          return `  <TabsContent value="${t.label}">\n${ind(content, 4)}\n  </TabsContent>`;
+        })
         .join("\n");
       return [
         `<Tabs defaultValue="${first}" className="w-full">`,
@@ -274,12 +337,26 @@ function renderJsx(type: string, props: Record<string, unknown>, idx: number, al
       ].join("\n");
     }
 
-    case "ScrollArea":
+    case "ScrollArea": {
+      const parent = allInstances?.find((i) => i.id === instanceId);
+      const parentCols = parent?.colSpan ?? 4;
+      const parentRows = parent?.rowSpan ?? 4;
+      const slotChildren = allInstances?.filter(
+        (i) => i.parentId === instanceId && i.slotKey === "content",
+      ) ?? [];
+      const content = slotContentJsx(
+        slotChildren,
+        parentCols * CELL_SIZE,
+        parentRows * CELL_SIZE,
+        allInstances ?? [],
+        `<p className="text-sm text-muted-foreground">Scrollable content area</p>`,
+      );
       return [
-        `<ScrollArea className="w-full h-24 rounded border p-2">`,
-        `  <p className="text-sm text-muted-foreground">Scrollable content area</p>`,
+        `<ScrollArea className="w-full rounded border" style={{ width: ${parentCols * CELL_SIZE}, height: ${parentRows * CELL_SIZE} }}>`,
+        ind(content, 2),
         `</ScrollArea>`,
       ].join("\n");
+    }
 
     case "Breadcrumb": {
       const items = (props.items as string[]) ?? ["Home", "Page"];

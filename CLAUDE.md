@@ -74,8 +74,9 @@ The canvas is a CSS grid container (`display: grid`). Each instance renders insi
 ### Code Generation
 
 `lib/generate.ts` — takes `ComponentInstance[]`, emits a `.tsx` string:
-- Page wrapper: `relative` div matching canvas dimensions
-- Each instance: `absolute` div with `top`/`left`/`width`/`height` derived from `col * cellSize`, etc., containing the shadcn component with its stored `props`
+- Root instances: `absolute` div with `top`/`left`/`width`/`height` from `col * CELL_SIZE`
+- Container slot children: `slotContentJsx()` helper renders a `relative` wrapper with `absolute` children using the same grid math; called recursively so nested containers work
+- `renderJsx(type, props, idx, allInstances?, instanceId?)` — pass `allInstances` + `instanceId` for containers; omitting them yields a static placeholder
 - Output triggered by a toolbar button; browser `<a download>` delivers the file
 
 ### Key Directories
@@ -96,11 +97,25 @@ lib/
 ### Container / Slot Pattern
 
 Components that accept dropped children (Accordion, Card, Tabs, ScrollArea) use:
-- A `*Preview` component that renders `ContainerSlot` children instead of static text
-- `ContainerSlot` is a `useDroppable` div with id `slot:{parentId}:{slotKey}`
+- A `*Preview` component that renders a `ContainerSlot` CSS grid (same cell size as main canvas)
+- `ContainerSlot` is a `useDroppable` grid with id `slot:{parentId}:{slotKey}`; children use `col`/`row`/`colSpan`/`rowSpan` for positioning
+- `SlotChild` (in CanvasInstance.tsx) mirrors `CanvasInstance`: `useDraggable`, grid placement, 8 resize handles
 - `renderComponent` delegates to the preview when `ctx: RenderCtx` is passed
-- Drop handling in `app/page.tsx` recognises `overId.startsWith("slot:")` and calls `addInstance(..., parentId, slotKey)`
+- Drop handling in `app/page.tsx` recognises `overId.startsWith("slot:")` and calculates col/row from `over.rect` (dnd-kit's droppable bounding rect) — not from the canvas element
 - Slot keys: Card/ScrollArea use `"content"`; Tabs use `"tab-{i}"`; Accordion uses `"item-{i}"`
+- Internal grid dimensions: `internalCols = parentColSpan`; `internalRows` adjusted per type: Card −2 rows (header), Tabs −1 row (TabsList), Accordion splits `(parentRowSpan − n)` rows across `n` items, ScrollArea uses full `parentRowSpan`. **This formula must stay consistent between `CanvasInstance.tsx` previews and `lib/generate.ts`.**
+- Each `*Preview` looks up its own instance via `instances.find(i => i.id === instanceId)` to get current colSpan/rowSpan
+
+### Drag Data Payloads
+
+`onDragEnd` in `app/page.tsx` distinguishes drag sources via `active.data.current`:
+- `{ isPalette: true, type, defaultProps }` — from Palette
+- `{ isCanvas: true }` — root canvas instance
+- `{ isSlotChild: true }` — child inside a container slot
+
+### Store Actions (store/editor.ts)
+
+Key actions beyond CRUD: `moveInstance(id, col, row)`, `resizeInstance(id, colSpan, rowSpan)`, `reparentInstance(id, parentId?, slotKey?)` (moves between slot↔canvas; clears parentId when undefined), `removeInstance` also removes all children with matching `parentId`.
 
 ### Component Registry
 
