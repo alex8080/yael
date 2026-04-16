@@ -430,10 +430,12 @@ function SlotChild({
   child,
   selectInstance,
   selectedId,
+  instances,
 }: {
   child: ComponentInstance;
   selectInstance: (id: string | null) => void;
   selectedId: string | null;
+  instances: ComponentInstance[];
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: child.id,
@@ -506,7 +508,7 @@ function SlotChild({
         isSelected && "ring-2 ring-blue-500 ring-inset rounded",
       )}
     >
-      {renderComponent(child.type, child.props)}
+      {renderComponent(child.type, child.props, { instanceId: child.id, instances, selectInstance, selectedId })}
       {isSelected && HANDLE_DEFS.map(({ pos, cursor, style }) => (
         <div
           key={pos}
@@ -532,6 +534,7 @@ function ContainerSlot({
   selectedId,
   internalCols,
   internalRows,
+  instances,
 }: {
   slotId: string;
   slotChildren: ComponentInstance[];
@@ -539,6 +542,7 @@ function ContainerSlot({
   selectedId: string | null;
   internalCols: number;
   internalRows: number;
+  instances: ComponentInstance[];
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: slotId });
   const fontScale = useEditorStore((s) => s.fontScale);
@@ -578,6 +582,7 @@ function ContainerSlot({
           child={child}
           selectInstance={selectInstance}
           selectedId={selectedId}
+          instances={instances}
         />
       ))}
     </div>
@@ -626,6 +631,7 @@ function AccordionPreview({
                 selectedId={selectedId}
                 internalCols={parentCols}
                 internalRows={contentRowsPerSlot}
+                instances={instances}
               />
             </AccordionContent>
           </AccordionItem>
@@ -676,6 +682,7 @@ function CardPreview({
           selectedId={selectedId}
           internalCols={parentCols}
           internalRows={contentRows}
+          instances={instances}
         />
       </CardContent>
     </Card>
@@ -728,6 +735,7 @@ function TabsPreview({
               selectedId={selectedId}
               internalCols={parentCols}
               internalRows={contentRows}
+              instances={instances}
             />
           </TabsContent>
         );
@@ -771,6 +779,7 @@ function ScrollAreaPreview({
         selectedId={selectedId}
         internalCols={parentCols}
         internalRows={parentRows}
+        instances={instances}
       />
     </ScrollArea>
   );
